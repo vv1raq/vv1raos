@@ -186,8 +186,18 @@ pub fn driver_register(drv: &'static Driver) -> Result<(), DriverError> {
                     n += 1;
                 }
             }
-            // Ранний лог напрямую в UART
+            // Ранний лог напрямую в UART (только если UART уже установлен)
             early_log("[DRV] registered\n");
+            // Также пишем в PL011 по фиксированному адресу QEMU (0x9000000) как fallback
+            const QEMU_PL011: usize = 0x9000000;
+            const DR: usize = 0x00;
+            const FR: usize = 0x18;
+            unsafe {
+                for b in b"[DRV] registered\n" {
+                    while core::ptr::read_volatile((QEMU_PL011 + FR) as *const u32) & (1 << 5) != 0 {}
+                    core::ptr::write_volatile((QEMU_PL011 + DR) as *mut u32, *b as u32);
+                }
+            }
             return Ok(());
         }
     }
