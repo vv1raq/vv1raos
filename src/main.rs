@@ -91,12 +91,6 @@ fn pmm_selftest() {
 #[no_mangle]
 pub extern "C" fn kernel_main(dtb: usize) -> ! {
     smp::init_boot_cpu();
-    // Регистрация платформенных драйверов (gcc/spmi/pmic/uart/ufs) до
-    // platform_init: platform_populate фильтрует узлы DT по зарегистрированным
-    // драйверам.
-    if let Err(e) = crate::drivers::register_all_drivers() {
-        kprintln!("driver registration failed: {:?}", e);
-    }
     let info = fdt::parse(dtb);
 
     // Отключаем APSS watchdog до любых потенциально зависающих действий
@@ -111,6 +105,20 @@ pub extern "C" fn kernel_main(dtb: usize) -> ! {
         unsafe { u.init() };
         u
     });
+
+    // Ранний UART для логов регистрации драйверов (до console::init)
+    if let Some(base) = info.as_ref().and_then(|i| i.pl011) {
+        crate::platform::set_early_uart(base);
+    }
+
+    // Регистрация платформенных драйверов (gcc/spmi/pmic/uart/ufs) до
+    // platform_init: platform_populate фильтрует узлы DT по зарегистрированным
+    // драйверам.
+    if let Err(e) = crate::drivers::register_all_drivers() {
+        // emergency_write вместо kprintln (консоль ещё не инициализирована)
+        let msg = format!("driver registration failed: {:?}\n", e);
+        crate::console::emergency_write(msg.as_bytes());
+    }
     // GENI SE UART — консоль реального железа (SM6375), ранний вывод
     if let Some(g) = info.as_ref().and_then(|i| i.geni_uart) {
         crate::drivers::geni_uart::early_init(g);

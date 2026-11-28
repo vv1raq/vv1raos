@@ -147,6 +147,31 @@ static DRIVERS: SpinLock<[Option<&'static Driver>; MAX_DRIVERS]> = SpinLock::new
 static DEVICES: SpinLock<[Option<PlatformDevice>; MAX_DEVICES]> = SpinLock::new([None; MAX_DEVICES]);
 static INIT_DONE: AtomicBool = AtomicBool::new(false);
 
+/// PL011 base для раннего лога (QEMU virt = 0x9000000)
+static EARLY_UART: AtomicUsize = AtomicUsize::new(0);
+
+/// Установить базу PL011 для раннего лога (вызывается из kernel_main после парсинга DTB)
+pub fn set_early_uart(base: usize) {
+    EARLY_UART.store(base, Ordering::Release);
+}
+
+/// Ранний лог напрямую в PL011 (работает до console::init)
+fn early_log(msg: &str) {
+    let base = EARLY_UART.load(Ordering::Acquire);
+    if base == 0 {
+        return;
+    }
+    const DR: usize = 0x00;
+    const FR: usize = 0x18;
+    unsafe {
+        for b in msg.bytes() {
+            // Ждём пока TX не свободен
+            while core::ptr::read_volatile((base + FR) as *const u32) & (1 << 5) != 0 {}
+            core::ptr::write_volatile((base + DR) as *mut u32, b as u32);
+        }
+    }
+}
+
 /// Зарегистрировать драйвер (вызывается из конструкторов драйверов)
 pub fn driver_register(drv: &'static Driver) -> Result<(), DriverError> {
     let mut drivers = DRIVERS.lock();
@@ -161,7 +186,12 @@ pub fn driver_register(drv: &'static Driver) -> Result<(), DriverError> {
                     n += 1;
                 }
             }
-            kprintln!("platform: driver '{}' registered (compat: {:?})", drv.name, &compats[..n]);
+            // Ранний лог напрямую в UART
+            let mut buf = [0u8; 128];
+            let name = drv.name.as_bytes();
+            let compat = compats[0].as_bytes();
+            let msg = format!("[DRV] {} compat={}\n", core::str::from_utf8(name).unwrap_or("?"), core::str::from_utf8(compat).unwrap_or("?"));
+            early_log(&msg);
             return Ok(());
         }
     }
