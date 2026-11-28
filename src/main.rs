@@ -97,9 +97,11 @@ unsafe fn run_init_array() {
     }
     let start = &__init_array_start as *const u8 as usize;
     let end = &__init_array_end as *const u8 as usize;
+    kprintln!("init_array: start={:#x} end={:#x} count={}", start, end, (end - start) / 8);
     let mut p = start;
     while p + 8 <= end {
         let f: fn() = core::mem::transmute((p as *const usize).read());
+        kprintln!("init_array: calling {:#x}", p);
         f();
         p += 8;
     }
