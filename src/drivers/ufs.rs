@@ -629,11 +629,10 @@ static UFS_DRIVER: Driver = Driver {
     remove: None,
 };
 
-#[used]
-#[link_section = ".init_array"]
-static UFS_DRIVER_REG: fn() = || {
-    let _ = platform::driver_register(&UFS_DRIVER);
-};
+/// Регистрация драйвера (явный вызов вместо .init_array)
+pub fn register_driver() -> Result<(), DriverError> {
+    platform::driver_register(&UFS_DRIVER)
+}
 
 // ---- Block device API ----
 

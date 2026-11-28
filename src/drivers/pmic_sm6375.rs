@@ -215,11 +215,10 @@ static PMIC_DRIVER: Driver = Driver {
     remove: None,
 };
 
-#[used]
-#[link_section = ".init_array"]
-static PMIC_DRIVER_REG: fn() = || {
-    let _ = platform::driver_register(&PMIC_DRIVER);
-};
+/// Регистрация драйвера (явный вызов вместо .init_array)
+pub fn register_driver() -> Result<(), DriverError> {
+    platform::driver_register(&PMIC_DRIVER)
+}
 
 // pub use pmic_ldo_enable;
 // pub use pmic_ldo_set_voltage;

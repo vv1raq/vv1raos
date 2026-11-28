@@ -88,32 +88,15 @@ fn pmm_selftest() {
     }
 }
 
-/// Вызывает функции-конструкторы из .init_array — регистрацию драйверов
-/// (см. #[link_section = ".init_array"] в src/drivers/*).
-unsafe fn run_init_array() {
-    extern "C" {
-        static __init_array_start: u8;
-        static __init_array_end: u8;
-    }
-    let start = &__init_array_start as *const u8 as usize;
-    let end = &__init_array_end as *const u8 as usize;
-    kprintln!("init_array: start={:#x} end={:#x} count={}", start, end, (end - start) / 8);
-    let mut p = start;
-    while p + 8 <= end {
-        let f: fn() = core::mem::transmute((p as *const usize).read());
-        kprintln!("init_array: calling {:#x}", p);
-        f();
-        p += 8;
-    }
-}
-
 #[no_mangle]
 pub extern "C" fn kernel_main(dtb: usize) -> ! {
     smp::init_boot_cpu();
     // Регистрация платформенных драйверов (gcc/spmi/pmic/uart/ufs) до
     // platform_init: platform_populate фильтрует узлы DT по зарегистрированным
     // драйверам.
-    unsafe { run_init_array() };
+    if let Err(e) = crate::drivers::register_all_drivers() {
+        kprintln!("driver registration failed: {:?}", e);
+    }
     let info = fdt::parse(dtb);
 
     // Отключаем APSS watchdog до любых потенциально зависающих действий

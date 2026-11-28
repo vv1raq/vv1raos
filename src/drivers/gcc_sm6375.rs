@@ -229,12 +229,10 @@ static GCC_DRIVER: Driver = Driver {
     remove: None,
 };
 
-/// Регистрация драйвера
-#[used]
-#[link_section = ".init_array"]
-static GCC_DRIVER_REG: fn() = || {
-    let _ = platform::driver_register(&GCC_DRIVER);
-};
+/// Регистрация драйвера (явный вызов вместо .init_array)
+pub fn register_driver() -> Result<(), DriverError> {
+    platform::driver_register(&GCC_DRIVER)
+}
 
 // Публичный API для других драйверов — wrapper функции с ожидаемыми именами
 pub fn clk_enable_by_id(clk_id: u32) -> Result<(), DriverError> {

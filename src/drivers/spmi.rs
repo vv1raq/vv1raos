@@ -215,11 +215,10 @@ static SPMI_DRIVER: Driver = Driver {
     remove: None,
 };
 
-#[used]
-#[link_section = ".init_array"]
-static SPMI_DRIVER_REG: fn() = || {
-    let _ = platform::driver_register(&SPMI_DRIVER);
-};
+/// Регистрация драйвера (явный вызов вместо .init_array)
+pub fn register_driver() -> Result<(), DriverError> {
+    platform::driver_register(&SPMI_DRIVER)
+}
 
 // pub use spmi_read_reg;
 // pub use spmi_write_reg;

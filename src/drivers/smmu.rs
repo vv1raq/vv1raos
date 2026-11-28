@@ -197,11 +197,10 @@ static SMMU_DRIVER: Driver = Driver {
     remove: None,
 };
 
-#[used]
-#[link_section = ".init_array"]
-static SMMU_DRIVER_REG: fn() = || {
-    let _ = platform::driver_register(&SMMU_DRIVER);
-};
+/// Регистрация драйвера (явный вызов вместо .init_array)
+pub fn register_driver() -> Result<(), DriverError> {
+    platform::driver_register(&SMMU_DRIVER)
+}
 
 // Публичная функция для UFS драйвера — запросить bypass для своего SID
 pub fn smmu_request_bypass(sid: u32) -> bool {

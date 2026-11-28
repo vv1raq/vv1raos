@@ -323,11 +323,10 @@ static MSM_UART_DRIVER: Driver = Driver {
     remove: None,
 };
 
-#[used]
-#[link_section = ".init_array"]
-static MSM_UART_DRIVER_REG: fn() = || {
-    let _ = platform::driver_register(&MSM_UART_DRIVER);
-};
+/// Регистрация драйвера (явный вызов вместо .init_array)
+pub fn register_driver() -> Result<(), DriverError> {
+    platform::driver_register(&MSM_UART_DRIVER)
+}
 
 // pub use earlycon_init;
 // pub use earlycon_putc;
