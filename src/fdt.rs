@@ -392,11 +392,13 @@ pub fn parse(dtb: usize) -> Option<BootInfo> {
                         node.is_watchdog |= has_compat(data, b"qcom,msm-watchdog");
                         node.is_pinctrl |= has_compat(data, b"qcom,tlmm");
                     }
-                    b"linux,initrd-start" if node.is_chosen && len >= 4 => {
+                    b"linux,initrd-start" if node.is_chosen && len >= 8 => {
                         info.initrd_start = Some(read_u64_prop(data) as usize);
+                        kprintln!("fdt: initrd-start = {:#x}", info.initrd_start.unwrap());
                     }
-                    b"linux,initrd-end" if node.is_chosen && len >= 4 => {
+                    b"linux,initrd-end" if node.is_chosen && len >= 8 => {
                         info.initrd_end = Some(read_u64_prop(data) as usize);
+                        kprintln!("fdt: initrd-end = {:#x}", info.initrd_end.unwrap());
                     }
                     _ => {}
                 }
@@ -718,6 +720,11 @@ fn finalize_platform_node<'a>(node: &PlatformNode<'a>, strings: &'a [u8], ac_sc:
     // Фильтр: регистрируем только если драйвер уже зарегистрирован и
     // поддерживает узел. Иначе реестр переполняется на реальном DTB.
     if !platform::driver_interested(&compat_arr, node.compat_n) {
+        // Логируем пропущенные узлы для диагностики
+        if node.compat_n > 0 {
+            let first_compat = unsafe { core::str::from_utf8_unchecked(node.compat[0]) };
+            kprintln!("fdt: skip node '{}' (compat: {}) - no driver", name_str, first_compat);
+        }
         return;
     }
 

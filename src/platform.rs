@@ -153,6 +153,15 @@ pub fn driver_register(drv: &'static Driver) -> Result<(), DriverError> {
     for slot in drivers.iter_mut() {
         if slot.is_none() {
             *slot = Some(drv);
+            let mut compats = [""; 8];
+            let mut n = 0;
+            for c in &drv.compatible[..drv.compatible_n] {
+                if !c.is_empty() && n < 8 {
+                    compats[n] = *c;
+                    n += 1;
+                }
+            }
+            kprintln!("platform: driver '{}' registered (compat: {:?})", drv.name, &compats[..n]);
             return Ok(());
         }
     }
@@ -192,6 +201,7 @@ pub fn platform_probe_all() -> usize {
                                     to_probe[to_probe_n] = i;
                                     to_probe_n += 1;
                                 }
+                                kprintln!("platform: will probe device {} ({}) with driver {}", i, dev.name, drv.name);
                                 break;
                             }
                         }
@@ -199,6 +209,10 @@ pub fn platform_probe_all() -> usize {
                 }
             }
         }
+    }
+
+    if to_probe_n == 0 {
+        kprintln!("platform: no devices to probe (no matching drivers)");
     }
 
     // Теперь пробуем каждое устройство
