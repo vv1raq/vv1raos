@@ -1,7 +1,7 @@
 use core::{
     fmt,
     marker::PhantomData,
-    sync::atomic::{AtomicBool, Ordering},
+    sync::atomic::{AtomicBool, AtomicUsize, Ordering},
 };
 
 /// Тип прерывания (как в DT: GIC_SPI, GIC_PPI, GIC_IPI)
@@ -187,11 +187,7 @@ pub fn driver_register(drv: &'static Driver) -> Result<(), DriverError> {
                 }
             }
             // Ранний лог напрямую в UART
-            let mut buf = [0u8; 128];
-            let name = drv.name.as_bytes();
-            let compat = compats[0].as_bytes();
-            let msg = format!("[DRV] {} compat={}\n", core::str::from_utf8(name).unwrap_or("?"), core::str::from_utf8(compat).unwrap_or("?"));
-            early_log(&msg);
+            early_log("[DRV] registered\n");
             return Ok(());
         }
     }

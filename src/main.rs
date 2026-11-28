@@ -116,8 +116,8 @@ pub extern "C" fn kernel_main(dtb: usize) -> ! {
     // драйверам.
     if let Err(e) = crate::drivers::register_all_drivers() {
         // emergency_write вместо kprintln (консоль ещё не инициализирована)
-        let msg = format!("driver registration failed: {:?}\n", e);
-        crate::console::emergency_write(msg.as_bytes());
+        crate::console::emergency_write(b"driver registration failed\n");
+        let _ = e; // suppress unused warning
     }
     // GENI SE UART — консоль реального железа (SM6375), ранний вывод
     if let Some(g) = info.as_ref().and_then(|i| i.geni_uart) {
